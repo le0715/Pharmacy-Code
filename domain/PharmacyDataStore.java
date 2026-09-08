@@ -17,7 +17,7 @@ public final class PharmacyDataStore {
     private int nextPrescriptionIdNumber = 1;
     private int nextNotificationIdNumber = 1;
 
-    private PharmacyDataStore() {
+    public PharmacyDataStore() {
         seedDemoAccounts();
         seedDemoInventory();
     }
