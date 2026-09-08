@@ -2,260 +2,282 @@ package pharmacy.app;
 
 import pharmacy.domain.*;
 
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
-import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
 import java.util.List;
+import java.util.Scanner;
 
-/**
- *  "Verify prescription" (UC03)
- *  "Dispense/sell medication" (UC05)
- *  "Manage and update inventory" (UC06)
- */
-public class PharmacistDashboardFrame extends JFrame {
+// UC03 - Verify prescription
+// UC05 - Dispense / sell medication
+// UC06 - Manage and update inventory
+public class PharmacistDashboardFrame {
 
-    private static final String[] PENDING_COLUMN_NAMES =
-            {"Prescription ID", "Patient", "Items", "Allergy History"};
-    private static final String[] PREPARING_COLUMN_NAMES =
-            {"Prescription ID", "Patient", "Items", "Total (RM)"};
-    private static final String[] INVENTORY_COLUMN_NAMES =
-            {"Medication ID", "Name", "Unit Price (RM)", "Stock Quantity", "Low Stock?"};
-
-    private final PharmacyDataStore pharmacyDataStore = PharmacyDataStore.getInstance();
+    private final PharmacyDataStore pharmacyDataStore;
     private final PharmacistUser loggedInPharmacist;
-
-    private final DefaultTableModel pendingTableModel;
-    private final DefaultTableModel preparingTableModel;
-    private final DefaultTableModel inventoryTableModel;
-
-    private JTable pendingPrescriptionTable;
-    private JTable preparingPrescriptionTable;
-    private JTable inventoryTable;
+    private final Scanner scanner;
 
     public PharmacistDashboardFrame(PharmacistUser loggedInPharmacist) {
-        super("Pharmacist Dashboard - " + loggedInPharmacist.getFullName());
         this.loggedInPharmacist = loggedInPharmacist;
-        this.pendingTableModel = createReadOnlyTableModel(PENDING_COLUMN_NAMES);
-        this.preparingTableModel = createReadOnlyTableModel(PREPARING_COLUMN_NAMES);
-        this.inventoryTableModel = createReadOnlyTableModel(INVENTORY_COLUMN_NAMES);
-        buildUserInterface();
-        refreshAllTables();
+        this.pharmacyDataStore = PharmacyDataStore.getInstance();
+        this.scanner = new Scanner(System.in);
     }
 
-    private DefaultTableModel createReadOnlyTableModel(String[] columnNames) {
-        return new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return false;
+    public void showDashboard() {
+
+        int choice;
+
+        do {
+            System.out.println("\n====================================");
+            System.out.println("       PHARMACIST DASHBOARD");
+            System.out.println("====================================");
+            System.out.println("Welcome, " + loggedInPharmacist.getFullName());
+
+            System.out.println("\n1. Verify Prescription");
+            System.out.println("2. Dispense Medication");
+            System.out.println("3. Manage Inventory");
+            System.out.println("4. Log Out");
+
+            System.out.print("Enter your choice: ");
+            choice = scanner.nextInt();
+
+            switch (choice) {
+
+                case 1:
+                    verifyPrescription();
+                    break;
+
+                case 2:
+                    dispenseMedication();
+                    break;
+
+                case 3:
+                    manageInventory();
+                    break;
+
+                case 4:
+                    System.out.println("Logging out...");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice.");
             }
-        };
+
+        } while (choice != 4);
     }
 
-    private void buildUserInterface() {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(760, 520);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout(10, 10));
+    // UC03
+    private void verifyPrescription() {
 
-        JLabel headingLabel = new JLabel("Welcome, " + loggedInPharmacist.getFullName(), JLabel.CENTER);
-        headingLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(headingLabel, BorderLayout.NORTH);
-
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Verify Prescriptions", buildVerifyPrescriptionsPanel());
-        tabbedPane.addTab("Dispense Medication", buildDispenseMedicationPanel());
-        tabbedPane.addTab("Manage Inventory", buildManageInventoryPanel());
-        add(tabbedPane, BorderLayout.CENTER);
-
-        JButton logoutButton = new JButton("Log Out");
-        logoutButton.addActionListener(event -> handleLogoutButtonClicked());
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(logoutButton);
-        add(bottomPanel, BorderLayout.SOUTH);
-    }
-
-    private JPanel buildVerifyPrescriptionsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        pendingPrescriptionTable = new JTable(pendingTableModel);
-        pendingPrescriptionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        panel.add(new JScrollPane(pendingPrescriptionTable), BorderLayout.CENTER);
-
-        JButton approveAndVerifyButton = new JButton("Approve & Verify Selected");
-        approveAndVerifyButton.addActionListener(event -> handleApproveAndVerifyButtonClicked());
-        JPanel actionPanel = new JPanel();
-        actionPanel.add(approveAndVerifyButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel buildDispenseMedicationPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        preparingPrescriptionTable = new JTable(preparingTableModel);
-        preparingPrescriptionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        panel.add(new JScrollPane(preparingPrescriptionTable), BorderLayout.CENTER);
-
-        JButton dispenseButton = new JButton("Process Payment & Dispense Selected");
-        dispenseButton.addActionListener(event -> handleDispenseButtonClicked());
-        JPanel actionPanel = new JPanel();
-        actionPanel.add(dispenseButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel buildManageInventoryPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        inventoryTable = new JTable(inventoryTableModel);
-        inventoryTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        panel.add(new JScrollPane(inventoryTable), BorderLayout.CENTER);
-
-        JButton restockButton = new JButton("Restock +10");
-        restockButton.addActionListener(event -> handleAdjustStockButtonClicked(10));
-
-        JButton deductStockButton = new JButton("Deduct -10");
-        deductStockButton.addActionListener(event -> handleAdjustStockButtonClicked(-10));
-
-        JPanel actionPanel = new JPanel();
-        actionPanel.add(restockButton);
-        actionPanel.add(deductStockButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private void refreshAllTables() {
-        refreshPendingPrescriptionTable();
-        refreshPreparingPrescriptionTable();
-        refreshInventoryTable();
-    }
-
-    private void refreshPendingPrescriptionTable() {
-        pendingTableModel.setRowCount(0);
         List<Prescription> pendingPrescriptions =
-                pharmacyDataStore.findPrescriptionsByStatus(PrescriptionStatus.PENDING);
+                pharmacyDataStore.findPrescriptionsByStatus(
+                        PrescriptionStatus.PENDING);
+
+        System.out.println("\n====================================");
+        System.out.println("       PENDING PRESCRIPTIONS");
+        System.out.println("====================================");
+
+        if (pendingPrescriptions.isEmpty()) {
+            System.out.println("No pending prescriptions.");
+            return;
+        }
+
         for (Prescription prescription : pendingPrescriptions) {
-            pendingTableModel.addRow(new Object[]{
-                    prescription.getPrescriptionId(),
-                    prescription.getPatient().getFullName(),
-                    prescription.getItemSummary(),
-                    prescription.getPatient().getAllergyHistory()
-            });
+
+            System.out.println("------------------------------------");
+            System.out.println("Prescription ID: "
+                    + prescription.getPrescriptionId());
+
+            System.out.println("Patient: "
+                    + prescription.getPatient().getFullName());
+
+            System.out.println("Items: "
+                    + prescription.getItemSummary());
+
+            System.out.println("Allergy History: "
+                    + prescription.getPatient().getAllergyHistory());
         }
+
+        System.out.print("\nEnter Prescription ID to verify: ");
+        String prescriptionId = scanner.next();
+
+        Prescription selectedPrescription =
+                findPrescriptionById(
+                        prescriptionId,
+                        pendingPrescriptions);
+
+        if (selectedPrescription == null) {
+
+            System.out.println("Prescription not found.");
+            return;
+        }
+
+        pharmacyDataStore.verifyAndApprovePrescription(
+                selectedPrescription);
+
+        System.out.println("Prescription "
+                + prescriptionId
+                + " verified successfully.");
+
+        System.out.println("Status changed to Preparing Medication.");
     }
 
-    private void refreshPreparingPrescriptionTable() {
-        preparingTableModel.setRowCount(0);
+    // UC05
+    private void dispenseMedication() {
+
         List<Prescription> preparingPrescriptions =
-                pharmacyDataStore.findPrescriptionsByStatus(PrescriptionStatus.PREPARING);
+                pharmacyDataStore.findPrescriptionsByStatus(
+                        PrescriptionStatus.PREPARING);
+
+        System.out.println("\n====================================");
+        System.out.println("       READY TO DISPENSE");
+        System.out.println("====================================");
+
+        if (preparingPrescriptions.isEmpty()) {
+            System.out.println("No prescriptions are ready.");
+            return;
+        }
+
         for (Prescription prescription : preparingPrescriptions) {
-            preparingTableModel.addRow(new Object[]{
-                    prescription.getPrescriptionId(),
-                    prescription.getPatient().getFullName(),
-                    prescription.getItemSummary(),
-                    String.format("%.2f", prescription.getTotalAmount())
-            });
+
+            System.out.println("------------------------------------");
+            System.out.println("Prescription ID: "
+                    + prescription.getPrescriptionId());
+
+            System.out.println("Patient: "
+                    + prescription.getPatient().getFullName());
+
+            System.out.println("Items: "
+                    + prescription.getItemSummary());
+
+            System.out.printf("Total: RM %.2f%n",
+                    prescription.getTotalAmount());
         }
+
+        System.out.print("\nEnter Prescription ID to dispense: ");
+        String prescriptionId = scanner.next();
+
+        Prescription selectedPrescription =
+                findPrescriptionById(
+                        prescriptionId,
+                        preparingPrescriptions);
+
+        if (selectedPrescription == null) {
+
+            System.out.println("Prescription not found.");
+            return;
+        }
+
+        pharmacyDataStore.dispenseMedication(
+                selectedPrescription);
+
+        System.out.println("\nPayment processed.");
+        System.out.println("Prescription "
+                + prescriptionId
+                + " has been dispensed.");
+        System.out.println("Thank you for your purchase!");
     }
 
-    private void refreshInventoryTable() {
-        inventoryTableModel.setRowCount(0);
-        List<Medication> medicationList = pharmacyDataStore.getAllMedications();
+    // UC06
+    private void manageInventory() {
+
+        List<Medication> medicationList =
+                pharmacyDataStore.getAllMedications();
+
+        System.out.println("\n====================================");
+        System.out.println("          INVENTORY");
+        System.out.println("====================================");
+
         for (Medication medication : medicationList) {
-            inventoryTableModel.addRow(new Object[]{
-                    medication.getMedicationId(),
-                    medication.getMedicationName(),
-                    String.format("%.2f", medication.getUnitPrice()),
-                    medication.getStockQuantity(),
-                    medication.isLowStock() ? "YES" : "No"
-            });
-        }
-    }
 
-    private void handleApproveAndVerifyButtonClicked() {
-        int selectedRowIndex = pendingPrescriptionTable.getSelectedRow();
-        if (selectedRowIndex == -1) {
-            showSelectionRequiredMessage();
-            return;
-        }
-        String prescriptionId = (String) pendingTableModel.getValueAt(selectedRowIndex, 0);
-        Prescription selectedPrescription = findPrescriptionById(prescriptionId,
-                pharmacyDataStore.findPrescriptionsByStatus(PrescriptionStatus.PENDING));
-        if (selectedPrescription != null) {
-            pharmacyDataStore.verifyAndApprovePrescription(selectedPrescription);
-            JOptionPane.showMessageDialog(this,
-                    "Prescription " + prescriptionId + " verified and is now Preparing Medication.");
-            refreshAllTables();
-        }
-    }
+            System.out.println("------------------------------------");
 
-    private void handleDispenseButtonClicked() {
-        int selectedRowIndex = preparingPrescriptionTable.getSelectedRow();
-        if (selectedRowIndex == -1) {
-            showSelectionRequiredMessage();
-            return;
-        }
-        String prescriptionId = (String) preparingTableModel.getValueAt(selectedRowIndex, 0);
-        Prescription selectedPrescription = findPrescriptionById(prescriptionId,
-                pharmacyDataStore.findPrescriptionsByStatus(PrescriptionStatus.PREPARING));
-        if (selectedPrescription != null) {
-            pharmacyDataStore.dispenseMedication(selectedPrescription);
-            JOptionPane.showMessageDialog(this,
-                    "Payment processed. Prescription " + prescriptionId + " has been dispensed. "
-                            + "Thanks for your purchase!");
-            refreshAllTables();
-        }
-    }
+            System.out.println("Medication ID: "
+                    + medication.getMedicationId());
 
-    private void handleAdjustStockButtonClicked(int quantityDelta) {
-        int selectedRowIndex = inventoryTable.getSelectedRow();
-        if (selectedRowIndex == -1) {
-            showSelectionRequiredMessage();
-            return;
+            System.out.println("Name: "
+                    + medication.getMedicationName());
+
+            System.out.printf("Unit Price: RM %.2f%n",
+                    medication.getUnitPrice());
+
+            System.out.println("Stock Quantity: "
+                    + medication.getStockQuantity());
+
+            System.out.println("Low Stock: "
+                    + (medication.isLowStock() ? "YES" : "NO"));
         }
-        String medicationId = (String) inventoryTableModel.getValueAt(selectedRowIndex, 0);
+
+        System.out.println("------------------------------------");
+
+        System.out.print("Enter Medication ID: ");
+        String medicationId = scanner.next();
+
         Medication selectedMedication = null;
-        for (Medication medication : pharmacyDataStore.getAllMedications()) {
+
+        for (Medication medication : medicationList) {
+
             if (medication.getMedicationId().equals(medicationId)) {
                 selectedMedication = medication;
                 break;
             }
         }
+
         if (selectedMedication == null) {
+
+            System.out.println("Medication not found.");
             return;
         }
+
+        System.out.println("\n1. Restock +10");
+        System.out.println("2. Deduct -10");
+        System.out.print("Enter choice: ");
+
+        int choice = scanner.nextInt();
+
+        int quantityDelta;
+
+        if (choice == 1) {
+
+            quantityDelta = 10;
+
+        } else if (choice == 2) {
+
+            quantityDelta = -10;
+
+        } else {
+
+            System.out.println("Invalid choice.");
+            return;
+        }
+
         try {
-            pharmacyDataStore.adjustMedicationStock(selectedMedication, quantityDelta);
-            refreshInventoryTable();
+
+            pharmacyDataStore.adjustMedicationStock(
+                    selectedMedication,
+                    quantityDelta);
+
+            System.out.println("Stock updated successfully.");
+            System.out.println("New stock quantity: "
+                    + selectedMedication.getStockQuantity());
+
         } catch (InvalidStockAdjustmentException exception) {
-            JOptionPane.showMessageDialog(this, exception.getMessage(),
-                    "Invalid Stock Adjustment", JOptionPane.ERROR_MESSAGE);
+
+            System.out.println("Invalid stock adjustment.");
+            System.out.println(exception.getMessage());
         }
     }
 
-    private Prescription findPrescriptionById(String prescriptionId, List<Prescription> prescriptionList) {
+    private Prescription findPrescriptionById(
+            String prescriptionId,
+            List<Prescription> prescriptionList) {
+
         for (Prescription prescription : prescriptionList) {
-            if (prescription.getPrescriptionId().equals(prescriptionId)) {
+
+            if (prescription.getPrescriptionId()
+                    .equals(prescriptionId)) {
+
                 return prescription;
             }
         }
+
         return null;
-    }
-
-    private void showSelectionRequiredMessage() {
-        JOptionPane.showMessageDialog(this, "Please select a row first.",
-                "No Selection", JOptionPane.WARNING_MESSAGE);
-    }
-
-    private void handleLogoutButtonClicked() {
-        new LoginFrame().setVisible(true);
-        dispose();
     }
 }

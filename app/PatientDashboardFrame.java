@@ -2,110 +2,122 @@ package pharmacy.app;
 
 import pharmacy.domain.*;
 
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
 import java.util.List;
+import java.util.Scanner;
 
-//UC02
-public class PatientDashboardFrame extends JFrame {
+// UC02
+public class PatientDashboardFrame {
 
-    private static final String[] TABLE_COLUMN_NAMES =
-            {"Prescription ID", "Date Issued", "Items", "Status", "Total (RM)"};
-
-    private final PharmacyDataStore pharmacyDataStore = PharmacyDataStore.getInstance();
+    private final PharmacyDataStore pharmacyDataStore;
     private final PatientUser loggedInPatient;
-    private final DefaultTableModel prescriptionTableModel;
+    private final Scanner scanner;
 
     public PatientDashboardFrame(PatientUser loggedInPatient) {
-        super("Patient Dashboard - " + loggedInPatient.getFullName());
         this.loggedInPatient = loggedInPatient;
-        this.prescriptionTableModel = new DefaultTableModel(TABLE_COLUMN_NAMES, 0) {
-            @Override
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return false;
+        this.pharmacyDataStore = PharmacyDataStore.getInstance();
+        this.scanner = new Scanner(System.in);
+    }
+
+    public void showDashboard() {
+
+        int choice;
+
+        do {
+            System.out.println("\n====================================");
+            System.out.println("        PATIENT DASHBOARD");
+            System.out.println("====================================");
+            System.out.println("Welcome, " + loggedInPatient.getFullName());
+            System.out.println("1. View Prescriptions");
+            System.out.println("2. View Notifications");
+            System.out.println("3. Refresh Prescription Status");
+            System.out.println("4. Log Out");
+            System.out.print("Enter your choice: ");
+
+            choice = scanner.nextInt();
+
+            switch (choice) {
+
+                case 1:
+                    viewPrescriptions();
+                    break;
+
+                case 2:
+                    showNotifications();
+                    break;
+
+                case 3:
+                    viewPrescriptions();
+                    break;
+
+                case 4:
+                    System.out.println("Logging out...");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice.");
             }
-        };
-        buildUserInterface();
-        refreshPrescriptionTable();
+
+        } while (choice != 4);
     }
 
-    private void buildUserInterface() {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(650, 420);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout(10, 10));
+    private void viewPrescriptions() {
 
-        JLabel headingLabel = new JLabel("Welcome, " + loggedInPatient.getFullName(), JLabel.CENTER);
-        headingLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(headingLabel, BorderLayout.NORTH);
-
-        JTable prescriptionTable = new JTable(prescriptionTableModel);
-        add(new JScrollPane(prescriptionTable), BorderLayout.CENTER);
-
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.addActionListener(event -> refreshPrescriptionTable());
-
-        JButton notificationsButton = new JButton("View Notifications");
-        notificationsButton.addActionListener(event -> showNotificationsDialog());
-
-        JButton logoutButton = new JButton("Log Out");
-        logoutButton.addActionListener(event -> handleLogoutButtonClicked());
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(refreshButton);
-        buttonPanel.add(notificationsButton);
-        buttonPanel.add(logoutButton);
-        add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private void refreshPrescriptionTable() {
-        prescriptionTableModel.setRowCount(0);
         List<Prescription> patientPrescriptions =
-                pharmacyDataStore.findPrescriptionsForPatient(loggedInPatient.getUserId());
+                pharmacyDataStore.findPrescriptionsForPatient(
+                        loggedInPatient.getUserId());
+
+        System.out.println("\n====================================");
+        System.out.println("       PRESCRIPTION STATUS");
+        System.out.println("====================================");
 
         if (patientPrescriptions.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No active prescription records found.",
-                    "Track Prescription Status", JOptionPane.INFORMATION_MESSAGE);
+            System.out.println("No active prescription records found.");
             return;
         }
 
         for (Prescription prescription : patientPrescriptions) {
-            prescriptionTableModel.addRow(new Object[]{
-                    prescription.getPrescriptionId(),
-                    prescription.getDateIssued(),
-                    prescription.getItemSummary(),
-                    prescription.getCurrentStatus().getDisplayLabel(),
-                    String.format("%.2f", prescription.getTotalAmount())
-            });
+
+            System.out.println("------------------------------------");
+            System.out.println("Prescription ID: "
+                    + prescription.getPrescriptionId());
+
+            System.out.println("Date Issued: "
+                    + prescription.getDateIssued());
+
+            System.out.println("Items: "
+                    + prescription.getItemSummary());
+
+            System.out.println("Status: "
+                    + prescription.getCurrentStatus().getDisplayLabel());
+
+            System.out.printf("Total: RM %.2f%n",
+                    prescription.getTotalAmount());
         }
+
+        System.out.println("------------------------------------");
     }
 
-    private void showNotificationsDialog() {
+    private void showNotifications() {
+
         List<NotificationMessage> notifications =
-                pharmacyDataStore.findNotificationsForUser(loggedInPatient.getEmailAddress());
-        StringBuilder messageBuilder = new StringBuilder();
+                pharmacyDataStore.findNotificationsForUser(
+                        loggedInPatient.getEmailAddress());
+
+        System.out.println("\n====================================");
+        System.out.println("          NOTIFICATIONS");
+        System.out.println("====================================");
+
         if (notifications.isEmpty()) {
-            messageBuilder.append("You have no notifications.");
+
+            System.out.println("You have no notifications.");
+
         } else {
+
             for (NotificationMessage notification : notifications) {
-                messageBuilder.append("- ").append(notification.getMessageText()).append("\n");
+
+                System.out.println("- "
+                        + notification.getMessageText());
             }
         }
-        JOptionPane.showMessageDialog(this, messageBuilder.toString(),
-                "Notifications", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void handleLogoutButtonClicked() {
-        new LoginFrame().setVisible(true);
-        dispose();
     }
 }

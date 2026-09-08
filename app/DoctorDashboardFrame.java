@@ -2,173 +2,350 @@ package pharmacy.app;
 
 import pharmacy.domain.*;
 
-
-import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
-import javax.swing.JTextField;
-import javax.swing.SpinnerNumberModel;
-import java.awt.BorderLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
-//UC09
-public class DoctorDashboardFrame extends JFrame {
+// UC09 - Doctor issues a prescription
+public class DoctorDashboardFrame {
 
-    private final PharmacyDataStore pharmacyDataStore = PharmacyDataStore.getInstance();
-    private final DoctorUser loggedInDoctor;
+    private PharmacyDataStore pharmacyDataStore;
+    private DoctorUser loggedInDoctor;
 
-    private final JComboBox<PatientUser> patientComboBox = new JComboBox<>();
-    private final JComboBox<Medication> medicationComboBox = new JComboBox<>();
-    private final JSpinner quantitySpinner = new JSpinner(new SpinnerNumberModel(1, 1, 999, 1));
-    private final JTextField dosageInstructionsField = new JTextField(18);
+    private Scanner scanner;
 
-    private final DefaultListModel<PrescriptionItem> pendingItemListModel = new DefaultListModel<>();
-    private final List<PrescriptionItem> currentPrescriptionItems = new ArrayList<>();
+    private List<PrescriptionItem> currentPrescriptionItems;
 
+
+    // Constructor
     public DoctorDashboardFrame(DoctorUser loggedInDoctor) {
-        super("Doctor Dashboard - " + loggedInDoctor.getFullName());
+
         this.loggedInDoctor = loggedInDoctor;
-        buildUserInterface();
+
+        pharmacyDataStore = PharmacyDataStore.getInstance();
+
+        scanner = new Scanner(System.in);
+
+        currentPrescriptionItems = new ArrayList<>();
     }
 
-    private void buildUserInterface() {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(560, 480);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout(10, 10));
 
-        JLabel headingLabel = new JLabel("Issue New Prescription", JLabel.CENTER);
-        headingLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(headingLabel, BorderLayout.NORTH);
+    // Start the doctor dashboard
+    public void showDashboard() {
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        GridBagConstraints constraints = new GridBagConstraints();
-        constraints.insets = new Insets(5, 5, 5, 5);
-        constraints.fill = GridBagConstraints.HORIZONTAL;
+        System.out.println("=================================");
+        System.out.println("       DOCTOR DASHBOARD");
+        System.out.println("=================================");
 
-        populatePatientComboBox();
-        populateMedicationComboBox();
+        System.out.println("Doctor: "
+                + loggedInDoctor.getFullName());
 
-        constraints.gridx = 0;
-        constraints.gridy = 0;
-        formPanel.add(new JLabel("Patient:"), constraints);
-        constraints.gridx = 1;
-        formPanel.add(patientComboBox, constraints);
+        System.out.println();
 
-        constraints.gridx = 0;
-        constraints.gridy = 1;
-        formPanel.add(new JLabel("Medication:"), constraints);
-        constraints.gridx = 1;
-        formPanel.add(medicationComboBox, constraints);
 
-        constraints.gridx = 0;
-        constraints.gridy = 2;
-        formPanel.add(new JLabel("Quantity:"), constraints);
-        constraints.gridx = 1;
-        formPanel.add(quantitySpinner, constraints);
-
-        constraints.gridx = 0;
-        constraints.gridy = 3;
-        formPanel.add(new JLabel("Dosage Instructions:"), constraints);
-        constraints.gridx = 1;
-        formPanel.add(dosageInstructionsField, constraints);
-
-        JButton addItemButton = new JButton("Add Item to Prescription");
-        addItemButton.addActionListener(event -> handleAddItemButtonClicked());
-        constraints.gridx = 0;
-        constraints.gridy = 4;
-        constraints.gridwidth = 2;
-        formPanel.add(addItemButton, constraints);
-
-        add(formPanel, BorderLayout.WEST);
-
-        JList<PrescriptionItem> pendingItemList = new JList<>(pendingItemListModel);
-        JScrollPane itemScrollPane = new JScrollPane(pendingItemList);
-        itemScrollPane.setBorder(BorderFactory.createTitledBorder("Items in this Prescription"));
-        add(itemScrollPane, BorderLayout.CENTER);
-
-        JButton submitPrescriptionButton = new JButton("Submit Prescription");
-        submitPrescriptionButton.addActionListener(event -> handleSubmitPrescriptionButtonClicked());
-
-        JButton logoutButton = new JButton("Log Out");
-        logoutButton.addActionListener(event -> handleLogoutButtonClicked());
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(submitPrescriptionButton);
-        buttonPanel.add(logoutButton);
-        add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private void populatePatientComboBox() {
-        for (PatientUser patient : pharmacyDataStore.getAllPatients()) {
-            patientComboBox.addItem(patient);
-        }
-    }
-
-    private void populateMedicationComboBox() {
-        for (Medication medication : pharmacyDataStore.getAllMedications()) {
-            medicationComboBox.addItem(medication);
-        }
-    }
-
-    private void handleAddItemButtonClicked() {
-        Medication selectedMedication = (Medication) medicationComboBox.getSelectedItem();
-        String dosageInstructions = dosageInstructionsField.getText().trim();
-
-        if (selectedMedication == null || dosageInstructions.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select a medication and enter dosage instructions.",
-                    "Missing Information", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        int selectedQuantity = (Integer) quantitySpinner.getValue();
-        PrescriptionItem newItem = new PrescriptionItem(selectedMedication, selectedQuantity, dosageInstructions);
-        currentPrescriptionItems.add(newItem);
-        pendingItemListModel.addElement(newItem);
-        dosageInstructionsField.setText("");
-    }
-
-    private void handleSubmitPrescriptionButtonClicked() {
-        PatientUser selectedPatient = (PatientUser) patientComboBox.getSelectedItem();
+        // Select patient
+        PatientUser selectedPatient = selectPatient();
 
         if (selectedPatient == null) {
-            JOptionPane.showMessageDialog(this, "Please select a patient.",
-                    "Missing Information", JOptionPane.WARNING_MESSAGE);
+            System.out.println("No patient selected.");
             return;
         }
+
+
+        // Add medications
+        addPrescriptionItems();
+
+
+        // Check whether medication was added
         if (currentPrescriptionItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please add at least one medication item.",
-                    "Missing Information", JOptionPane.WARNING_MESSAGE);
+
+            System.out.println(
+                    "No medication was added."
+            );
+
             return;
         }
 
-        Prescription newPrescription = pharmacyDataStore.createPrescription(
-                selectedPatient, loggedInDoctor, currentPrescriptionItems);
 
-        JOptionPane.showMessageDialog(this,
-                "Prescription " + newPrescription.getPrescriptionId()
-                        + " submitted with status: " + newPrescription.getCurrentStatus().getDisplayLabel(),
-                "Prescription Submitted", JOptionPane.INFORMATION_MESSAGE);
-
-        currentPrescriptionItems.clear();
-        pendingItemListModel.clear();
+        // Submit prescription
+        submitPrescription(selectedPatient);
     }
 
-    private void handleLogoutButtonClicked() {
-        new LoginFrame().setVisible(true);
-        dispose();
+
+    // Select a patient
+    private PatientUser selectPatient() {
+
+        List<PatientUser> patients =
+                pharmacyDataStore.getAllPatients();
+
+
+        if (patients.isEmpty()) {
+
+            System.out.println(
+                    "No patients available."
+            );
+
+            return null;
+        }
+
+
+        System.out.println("Select Patient:");
+
+        for (int i = 0; i < patients.size(); i++) {
+
+            System.out.println(
+                    (i + 1)
+                    + ". "
+                    + patients.get(i).getFullName()
+            );
+        }
+
+
+        System.out.print("Enter patient number: ");
+
+        int choice = scanner.nextInt();
+
+        scanner.nextLine();
+
+
+        if (choice < 1 || choice > patients.size()) {
+
+            System.out.println(
+                    "Invalid patient selection."
+            );
+
+            return null;
+        }
+
+
+        return patients.get(choice - 1);
+    }
+
+
+    // Add medications to prescription
+    private void addPrescriptionItems() {
+
+        boolean addMore = true;
+
+
+        while (addMore) {
+
+            Medication selectedMedication =
+                    selectMedication();
+
+
+            if (selectedMedication == null) {
+                return;
+            }
+
+
+            // Quantity
+            System.out.print("Enter quantity: ");
+
+            int quantity = scanner.nextInt();
+
+            scanner.nextLine();
+
+
+            if (quantity <= 0) {
+
+                System.out.println(
+                        "Quantity must be greater than 0."
+                );
+
+                continue;
+            }
+
+
+            // Dosage instructions
+            System.out.print(
+                    "Enter dosage instructions: "
+            );
+
+            String dosageInstructions =
+                    scanner.nextLine().trim();
+
+
+            if (dosageInstructions.isEmpty()) {
+
+                System.out.println(
+                        "Dosage instructions cannot be empty."
+                );
+
+                continue;
+            }
+
+
+            // Create prescription item
+            PrescriptionItem item =
+                    new PrescriptionItem(
+                            selectedMedication,
+                            quantity,
+                            dosageInstructions
+                    );
+
+
+            // Add item to ArrayList
+            currentPrescriptionItems.add(item);
+
+
+            System.out.println(
+                    "Medication added successfully."
+            );
+
+
+            // Ask whether doctor wants another medication
+            System.out.print(
+                    "Add another medication? (Y/N): "
+            );
+
+            String answer =
+                    scanner.nextLine();
+
+
+            if (!answer.equalsIgnoreCase("Y")) {
+
+                addMore = false;
+            }
+
+
+            System.out.println();
+        }
+    }
+
+
+    // Select medication
+    private Medication selectMedication() {
+
+        List<Medication> medications =
+                pharmacyDataStore.getAllMedications();
+
+
+        if (medications.isEmpty()) {
+
+            System.out.println(
+                    "No medications available."
+            );
+
+            return null;
+        }
+
+
+        System.out.println();
+        System.out.println("Select Medication:");
+
+
+        for (int i = 0; i < medications.size(); i++) {
+
+            System.out.println(
+                    (i + 1)
+                    + ". "
+                    + medications.get(i)
+            );
+        }
+
+
+        System.out.print(
+                "Enter medication number: "
+        );
+
+        int choice = scanner.nextInt();
+
+        scanner.nextLine();
+
+
+        if (choice < 1 || choice > medications.size()) {
+
+            System.out.println(
+                    "Invalid medication selection."
+            );
+
+            return null;
+        }
+
+
+        return medications.get(choice - 1);
+    }
+
+
+    // Submit prescription
+    private void submitPrescription(
+            PatientUser selectedPatient) {
+
+
+        System.out.println();
+        System.out.println(
+                "================================="
+        );
+
+        System.out.println(
+                "       PRESCRIPTION SUMMARY"
+        );
+
+        System.out.println(
+                "================================="
+        );
+
+
+        System.out.println(
+                "Patient: "
+                + selectedPatient.getFullName()
+        );
+
+
+        System.out.println(
+                "Doctor: "
+                + loggedInDoctor.getFullName()
+        );
+
+
+        System.out.println();
+
+
+        // Display prescription items
+        System.out.println("Medications:");
+
+        for (PrescriptionItem item :
+                currentPrescriptionItems) {
+
+            System.out.println(
+                    "- " + item
+            );
+        }
+
+
+        System.out.println();
+
+
+        // Create prescription
+        Prescription newPrescription =
+                pharmacyDataStore.createPrescription(
+                        selectedPatient,
+                        loggedInDoctor,
+                        currentPrescriptionItems
+                );
+
+
+        System.out.println(
+                "Prescription submitted successfully."
+        );
+
+
+        System.out.println(
+                "Prescription ID: "
+                + newPrescription.getPrescriptionId()
+        );
+
+
+        System.out.println(
+                "Status: "
+                + newPrescription
+                        .getCurrentStatus()
+                        .getDisplayLabel()
+        );
+
+
+        // Clear the list after submission
+        currentPrescriptionItems.clear();
     }
 }

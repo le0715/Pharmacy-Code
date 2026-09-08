@@ -1,156 +1,152 @@
 package pharmacy.app;
 
-import pharmacy.domain.*;
+import pharmacy.domain.AdministratorUser;
+import pharmacy.domain.PharmacyDataStore;
+import pharmacy.domain.SystemUser;
 
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.JTextArea;
-import javax.swing.ListSelectionModel;
-import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
-import java.awt.Font;
 import java.util.List;
+import java.util.Scanner;
 
-//admin dashboard
-/**
- *  "Manage user access" (UC08)
- *  "Generate report" (UC07)
- */
-public class AdministratorDashboardFrame extends JFrame {
+public class AdministratorDashboardFrame {
 
-    private static final String[] USER_TABLE_COLUMN_NAMES =
-            {"User ID", "Full Name", "Email", "Role", "Status"};
-
-    private final PharmacyDataStore pharmacyDataStore = PharmacyDataStore.getInstance();
+    private final PharmacyDataStore pharmacyDataStore;
     private final AdministratorUser loggedInAdministrator;
-
-    private final DefaultTableModel userTableModel;
-    private JTable userAccountTable;
-    private final JTextArea reportOutputArea = new JTextArea();
+    private final Scanner scanner;
 
     public AdministratorDashboardFrame(AdministratorUser loggedInAdministrator) {
-        super("Administrator Dashboard - " + loggedInAdministrator.getFullName());
         this.loggedInAdministrator = loggedInAdministrator;
-        this.userTableModel = new DefaultTableModel(USER_TABLE_COLUMN_NAMES, 0) {
-            @Override
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return false;
+        this.pharmacyDataStore = PharmacyDataStore.getInstance();
+        this.scanner = new Scanner(System.in);
+    }
+
+    public void showDashboard() {
+
+        int choice;
+
+        do {
+            System.out.println("\n=================================");
+            System.out.println("      ADMINISTRATOR DASHBOARD");
+            System.out.println("=================================");
+            System.out.println("Welcome, " + loggedInAdministrator.getFullName());
+            System.out.println("1. Manage User Access");
+            System.out.println("2. Generate Inventory Report");
+            System.out.println("3. Generate Sales Report");
+            System.out.println("4. Log Out");
+            System.out.print("Enter your choice: ");
+
+            choice = scanner.nextInt();
+
+            switch (choice) {
+                case 1:
+                    manageUserAccess();
+                    break;
+
+                case 2:
+                    generateInventoryReport();
+                    break;
+
+                case 3:
+                    generateSalesReport();
+                    break;
+
+                case 4:
+                    System.out.println("Logging out...");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice.");
             }
-        };
-        buildUserInterface();
-        refreshUserAccountTable();
+
+        } while (choice != 4);
     }
 
-    private void buildUserInterface() {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(720, 500);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout(10, 10));
+    private void manageUserAccess() {
 
-        JLabel headingLabel = new JLabel("Welcome, " + loggedInAdministrator.getFullName(), JLabel.CENTER);
-        headingLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(headingLabel, BorderLayout.NORTH);
+        List<SystemUser> users =
+                pharmacyDataStore.getAllRegisteredUsers();
 
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Manage User Access", buildManageUserAccessPanel());
-        tabbedPane.addTab("Generate Reports", buildGenerateReportsPanel());
-        add(tabbedPane, BorderLayout.CENTER);
+        System.out.println("\n=================================");
+        System.out.println("       MANAGE USER ACCESS");
+        System.out.println("=================================");
 
-        JButton logoutButton = new JButton("Log Out");
-        logoutButton.addActionListener(event -> handleLogoutButtonClicked());
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(logoutButton);
-        add(bottomPanel, BorderLayout.SOUTH);
-    }
+        for (SystemUser user : users) {
 
-    private JPanel buildManageUserAccessPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        userAccountTable = new JTable(userTableModel);
-        userAccountTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        panel.add(new JScrollPane(userAccountTable), BorderLayout.CENTER);
+            System.out.println("User ID: " + user.getUserId());
+            System.out.println("Name: " + user.getFullName());
+            System.out.println("Email: " + user.getEmailAddress());
+            System.out.println("Role: " + user.getUserRole());
+            System.out.println("Status: "
+                    + (user.isActiveAccount() ? "Active" : "Inactive"));
 
-        JButton activateButton = new JButton("Activate Selected");
-        activateButton.addActionListener(event -> handleSetUserActiveStatus(true));
-
-        JButton deactivateButton = new JButton("Deactivate Selected");
-        deactivateButton.addActionListener(event -> handleSetUserActiveStatus(false));
-
-        JPanel actionPanel = new JPanel();
-        actionPanel.add(activateButton);
-        actionPanel.add(deactivateButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel buildGenerateReportsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        reportOutputArea.setEditable(false);
-        reportOutputArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        panel.add(new JScrollPane(reportOutputArea), BorderLayout.CENTER);
-
-        JButton inventoryReportButton = new JButton("Generate Inventory Report");
-        inventoryReportButton.addActionListener(event ->
-                reportOutputArea.setText(pharmacyDataStore.generateInventoryReport()));
-
-        JButton salesReportButton = new JButton("Generate Sales Report");
-        salesReportButton.addActionListener(event ->
-                reportOutputArea.setText(pharmacyDataStore.generateSalesReport()));
-
-        JPanel actionPanel = new JPanel();
-        actionPanel.add(inventoryReportButton);
-        actionPanel.add(salesReportButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private void refreshUserAccountTable() {
-        userTableModel.setRowCount(0);
-        List<SystemUser> allUsers = pharmacyDataStore.getAllRegisteredUsers();
-        for (SystemUser user : allUsers) {
-            userTableModel.addRow(new Object[]{
-                    user.getUserId(),
-                    user.getFullName(),
-                    user.getEmailAddress(),
-                    user.getUserRole(),
-                    user.isActiveAccount() ? "Active" : "Inactive"
-            });
+            System.out.println("---------------------------------");
         }
-    }
 
-    private void handleSetUserActiveStatus(boolean shouldBeActive) {
-        int selectedRowIndex = userAccountTable.getSelectedRow();
-        if (selectedRowIndex == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a user account first.",
-                    "No Selection", JOptionPane.WARNING_MESSAGE);
+        System.out.print("Enter User ID to change status: ");
+        String userId = scanner.next();
+
+        System.out.println("1. Activate");
+        System.out.println("2. Deactivate");
+        System.out.print("Enter choice: ");
+
+        int choice = scanner.nextInt();
+
+        SystemUser targetUser = findUserById(userId);
+
+        if (targetUser == null) {
+            System.out.println("User not found.");
             return;
         }
-        String userId = (String) userTableModel.getValueAt(selectedRowIndex, 0);
-        SystemUser targetUser = findUserById(userId);
-        if (targetUser != null) {
-            pharmacyDataStore.setUserAccountActive(targetUser, shouldBeActive);
-            refreshUserAccountTable();
+
+        if (choice == 1) {
+
+            pharmacyDataStore.setUserAccountActive(targetUser, true);
+            System.out.println("User account activated.");
+
+        } else if (choice == 2) {
+
+            pharmacyDataStore.setUserAccountActive(targetUser, false);
+            System.out.println("User account deactivated.");
+
+        } else {
+
+            System.out.println("Invalid choice.");
         }
     }
 
     private SystemUser findUserById(String userId) {
-        for (SystemUser user : pharmacyDataStore.getAllRegisteredUsers()) {
+
+        List<SystemUser> users =
+                pharmacyDataStore.getAllRegisteredUsers();
+
+        for (SystemUser user : users) {
+
             if (user.getUserId().equals(userId)) {
                 return user;
             }
         }
+
         return null;
     }
 
-    private void handleLogoutButtonClicked() {
-        new LoginFrame().setVisible(true);
-        dispose();
+    private void generateInventoryReport() {
+
+        System.out.println("\n=================================");
+        System.out.println("       INVENTORY REPORT");
+        System.out.println("=================================");
+
+        System.out.println(
+                pharmacyDataStore.generateInventoryReport()
+        );
+    }
+
+    private void generateSalesReport() {
+
+        System.out.println("\n=================================");
+        System.out.println("          SALES REPORT");
+        System.out.println("=================================");
+
+        System.out.println(
+                pharmacyDataStore.generateSalesReport()
+        );
     }
 }

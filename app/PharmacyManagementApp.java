@@ -1,28 +1,58 @@
 package pharmacy.app;
 
-import pharmacy.domain.*;
+import java.util.Scanner;
 
+public class PharmacyManagementApp {
 
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+    public static void main(String[] args) {
 
-//patient dashboard
-public final class PharmacyManagementApp {
+        Scanner scanner = new Scanner(System.in);
 
-    private PharmacyManagementApp() {
+        boolean running = true;
 
-    }
+        while (running) {
 
-    public static void main(String[] commandLineArguments) {
-        applySystemLookAndFeel();
-        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
-    }
+            System.out.println();
+            System.out.println("====================================");
+            System.out.println("     PHARMACY MANAGEMENT SYSTEM");
+            System.out.println("====================================");
+            System.out.println("1. Login");
+            System.out.println("2. Register");
+            System.out.println("3. Exit");
+            System.out.println("====================================");
 
-    private static void applySystemLookAndFeel() {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception lookAndFeelException) {
-          
+            System.out.print("Enter your choice: ");
+
+            String choice = scanner.nextLine();
+
+            if (choice.equals("1")) {
+
+                LoginFrame login = new LoginFrame();
+
+                login.startLogin();
+
+                // After startLogin() finishes,
+                // the program comes back here.
+                System.out.println("\nBack to main menu...");
+
+            } else if (choice.equals("2")) {
+
+                RegisterFrame register = new RegisterFrame();
+
+                register.start();
+
+            } else if (choice.equals("3")) {
+
+                System.out.println("Goodbye!");
+
+                running = false;
+
+            } else {
+
+                System.out.println("Invalid choice.");
+            }
         }
+
+        scanner.close();
     }
 }
